@@ -1,0 +1,40 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Git Clone') {
+            steps {
+                git "https://github.com/Shubham1996-aws/java-web-app-docker.git"
+            }
+        }
+        
+        stage('Maven Build') {
+            steps {
+                sh "mvn clean install package"
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t 544807074632.dkr.ecr.us-east-1.amazonaws.com/java-web-app ."
+            }
+        }
+        
+        stage('Push Docker Image') {
+            steps {
+                sh "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 544807074632.dkr.ecr.us-east-1.amazonaws.com"
+                sh "docker push 544807074632.dkr.ecr.us-east-1.amazonaws.com/java-web-app"
+            }
+        }
+        
+        stage('Deploy Docker Image in Deployment Server') {
+            steps {sshagent(['Deployment_server']) {
+            sh "ssh -o StrictHostKeyChecking=no ubuntu@172.31.83.200 aws ecr get-login-password --region us-east-1 | ssh -o StrictHostKeyChecking=no ubuntu@172.31.83.200 docker login --username AWS --password-stdin 544807074632.dkr.ecr.us-east-1.amazonaws.com"
+            sh "ssh -o StrictHostKeyChecking=no ubuntu@172.31.83.200 docker run -d --name javawebappcontainer -p 8080:8080  544807074632.dkr.ecr.us-east-1.amazonaws.com/java-web-app"
+}
+                
+                
+            }
+        }
+    }
+}
